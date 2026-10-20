@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comapan Operations Center – Gestión de Recursos de Inventario</title>
+<style>
+/* ===== TOKENS (idénticos a A1) ===== */
+:root{
+  --bg:#0b0e13; --surface:#141a22; --surface-2:#1b232e; --border:#2a3441;
+  --text:#e6ebf2; --text-muted:#8b97a8;
+  --accent:#1f6feb; --accent-hover:#3b8bff;
+  --ok:#3fb950; --info:#1f6feb; --warn:#f0883e; --danger:#f85149; --neutral:#6e7781; --yellow:#d29922;
+  --radius:6px; --shadow:0 1px 2px rgba(0,0,0,.4);
+  --side-w:220px; --side-w-c:56px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:Inter,Roboto,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;display:flex;flex-direction:column;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+/* ===== HEADER ===== */
+.header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 16px;height:52px;background:#07090c;border-bottom:2px solid var(--accent-hover);flex-shrink:0}
+.header__left,.header__right{display:flex;align-items:center;gap:12px}
+.icon-btn{background:none;border:1px solid transparent;border-radius:var(--radius);width:36px;height:36px;display:grid;place-items:center;font-size:18px;position:relative}
+.icon-btn:hover{background:var(--surface-2);border-color:var(--border)}
+.brand{font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.brand span{color:var(--text-muted);font-weight:400;letter-spacing:0}
+.header__center{color:var(--text-muted);font-size:13px;text-align:center}
+.header__center b{color:var(--text);font-weight:600}
+.badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:8px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+.clock{font-variant-numeric:tabular-nums;font-weight:600;min-width:72px;text-align:right}
+
+/* ===== SIDEBAR ===== */
+.shell{display:flex;flex:1;min-height:0}
+.sidebar{width:var(--side-w);background:var(--surface);border-right:1px solid var(--border);padding:12px 0;flex-shrink:0;transition:width .25s ease;overflow:hidden}
+.sidebar.collapsed{width:var(--side-w-c)}
+.nav{list-style:none}
+.nav a{display:flex;align-items:center;gap:14px;padding:11px 16px;color:var(--text-muted);text-decoration:none;border-left:3px solid transparent;white-space:nowrap}
+.nav a:hover{background:var(--surface-2);color:var(--text)}
+.nav a.active{background:rgba(31,111,235,.16);color:var(--text);border-left-color:var(--accent-hover);font-weight:600}
+.nav .ico{width:22px;text-align:center;font-size:16px;flex-shrink:0}
+.nav .lbl{transition:opacity .2s}
+.sidebar.collapsed .lbl{opacity:0}
+
+/* ===== ENCABEZADO DE PÁGINA + BANNER DE DIAGNÓSTICO ===== */
+.main{flex:1;min-width:0;padding:20px 24px 32px}
+.page-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.page-head h1{font-size:20px}
+.page-head p{color:var(--text-muted)}
+.btn{border:none;border-radius:var(--radius);padding:10px 18px;font-weight:600;background:var(--accent);color:#fff;transition:background .15s;box-shadow:var(--shadow)}
+.btn:hover:not(:disabled){background:var(--accent-hover)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.banner{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px}
+.ring{width:18px;height:18px;border-radius:50%;border:3px solid var(--neutral);display:grid;place-items:center;flex-shrink:0}
+.ring::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--neutral)}
+.banner.crit .ring{border-color:var(--danger)}.banner.crit .ring::after{background:var(--danger)}
+.banner b{letter-spacing:.04em}
+.banner.crit b{color:var(--danger)}
+
+/* ===== GRID ===== */
+.grid{display:grid;grid-template-columns:5fr 7fr;gap:20px;align-items:start}
+.full{grid-column:1/-1}
+.sec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);min-width:0}
+.sec h2{font-size:15px;margin-bottom:14px}
+
+/* ===== PILLS ===== */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill--ok{color:var(--ok);border-color:var(--ok);background:rgba(63,185,80,.12)}
+.pill--info{color:#6aa5ff;border-color:var(--info);background:rgba(31,111,235,.15)}
+.pill--info.pulse::before{background:var(--info);animation:pulse 1.2s infinite}
+.pill--warn{color:var(--warn);border-color:var(--warn);background:rgba(240,136,62,.14)}
+.pill--danger{color:#ff938d;border-color:var(--danger);background:rgba(248,81,73,.12)}
+.pill--neutral{color:var(--text-muted);border-color:var(--neutral);background:rgba(110,119,129,.14)}
+.pill.flash{animation:flashr 1.5s ease}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(59,139,255,.7)}100%{box-shadow:0 0 0 8px rgba(59,139,255,0)}}
+@keyframes flashr{0%,50%{background:var(--danger);color:#fff}100%{}}
+
+/* ===== INFRAESTRUCTURA (medidores) ===== */
+.gauge{background:var(--surface-2);border:1px solid var(--border);border-left:4px solid var(--ok);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+.gauge.lvl-warn{border-left-color:var(--warn)}.gauge.lvl-danger{border-left-color:var(--danger)}
+.gauge.conflict{border:1px solid var(--danger);border-left:4px solid var(--danger);animation:halo 1s ease 3}
+@keyframes halo{0%,100%{box-shadow:0 0 0 0 rgba(248,81,73,0)}50%{box-shadow:0 0 0 6px rgba(248,81,73,.45)}}
+.g-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.g-name{font-weight:600}
+.g-pct{font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;margin:6px 0 10px}
+.tag{font-size:11px;font-weight:700;color:#fff;background:var(--danger);border-radius:4px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+.track{position:relative;height:14px;background:var(--bg);border:1px solid var(--border);border-radius:4px}
+.fill{height:100%;border-radius:3px;background:var(--ok)}
+.lvl-warn .fill{background:var(--warn)}.lvl-danger .fill{background:var(--danger)}
+.mark{position:absolute;top:0;bottom:0;width:1px;background:rgba(230,235,242,.35)}
+.req{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--text)}
+.req-lbl{position:absolute;top:-24px;transform:translateX(-50%);font-size:11px;white-space:nowrap;color:var(--text)}
+.scale{display:flex;justify-content:space-between;color:var(--text-muted);font-size:11px;margin-top:2px}
+.g-meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px;color:var(--text-muted)}
+.g-meta b{color:var(--text)}
+.g-alert{margin-top:8px;color:#ff938d;font-weight:600}
+.g-cov{margin-top:8px;font-weight:600}
+.g-cov.ok{color:var(--ok)}.g-cov.bad{color:#ff938d}
+.has-req .track{margin-top:24px}
+
+/* ===== TABLAS (EQUIPOS / PERSONAL) ===== */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--text-muted);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+tbody tr{border-left:4px solid var(--neutral);transition:background .15s}
+tbody tr:hover{background:var(--surface-2)}
+tr.b-ok{border-left-color:var(--ok)}tr.b-info{border-left-color:var(--info)}tr.b-danger{border-left-color:var(--danger)}tr.b-neutral{border-left-color:var(--neutral)}
+tr.conflict-row{background:rgba(248,81,73,.12)}
+.bat{display:inline-flex;align-items:center;gap:8px}
+.bat i{display:inline-block;width:56px;height:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.bat i b{display:block;height:100%}
+.muted{color:var(--text-muted);font-size:12px;margin-left:8px}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;right:20px;bottom:20px;max-width:420px;z-index:50;display:flex;gap:12px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:var(--radius);padding:14px 16px;box-shadow:0 4px 16px rgba(0,0,0,.5);animation:slide .3s ease}
+.toast p{flex:1}
+.toast button{background:none;border:none;font-size:16px;color:var(--text-muted);width:28px;height:28px;border-radius:var(--radius)}
+.toast button:hover{background:var(--surface);color:var(--text)}
+@keyframes slide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .sidebar{width:var(--side-w-c)}.sidebar .lbl{display:none}
+  .header__center{display:none}.main{padding:16px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header__left">
+    <button class="icon-btn" id="toggleSide" aria-label="Mostrar u ocultar menú lateral" aria-expanded="true">☰</button>
+    <div class="brand">COMAPAN OPERATIONS CENTER <span>| Módulo de Recursos</span></div>
+  </div>
+  <div class="header__center">Turno: <b>Mañana</b> | Receta: <b>RM_Ponque_Vino_100KG</b></div>
+  <div class="header__right">
+    <button class="icon-btn" aria-label="Perfil: Ana Gómez, Supervisora de Almacén" title="Ana Gómez – Supervisora de Almacén">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Notificaciones, 3 sin leer">🔔<span class="badge">3</span></button>
+    <time class="clock" id="clock" aria-label="Hora actual">--:--:--</time>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ===== SIDEBAR ===== -->
+  <nav class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <ul class="nav">
+      <li><a href="#" data-nav><span class="ico">▦</span><span class="lbl">Dashboard</span></a></li>
+      <li><a href="#" data-nav><span class="ico">⇩</span><span class="lbl">Órdenes ERP</span></a></li>
+      <li><a href="#" class="active" aria-current="page" data-nav><span class="ico">▤</span><span class="lbl">Gestión de Recursos</span></a></li>
+      <li><a href="#" data-nav><span class="ico">☷</span><span class="lbl">Programación Detallada</span></a></li>
+      <li><a href="#" data-nav><span class="ico">▶</span><span class="lbl">Ejecución</span></a></li>
+      <li><a href="#" data-nav><span class="ico">◔</span><span class="lbl">Seguimiento WIP</span></a></li>
+    </ul>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <div><h1>Gestión de Recursos de Inventario</h1><p>Orden en planificación: <span class="num" id="ordId"></span></p></div>
+      <button class="btn" id="btnDiag">Ejecutar Diagnóstico de Disponibilidad</button>
+    </div>
+
+    <!-- ===== BANNER DE DIAGNÓSTICO ===== -->
+    <div class="banner" id="banner" role="status"><span class="ring" aria-hidden="true"></span><span id="bannerTxt"></span></div>
+
+    <div class="grid">
+      <!-- ===== INFRAESTRUCTURA ===== -->
+      <section class="sec" aria-label="Capacidad de almacenamiento crítico">
+        <h2>Capacidad de Almacenamiento Crítico</h2>
+        <div id="almac"></div>
+      </section>
+
+      <!-- ===== EQUIPOS ===== -->
+      <section class="sec" aria-label="Estado de equipos logísticos">
+        <h2>Estado de Equipos Logísticos</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Equipo</th><th>Estado</th><th>Asignación</th><th>Batería</th></tr></thead>
+          <tbody id="tbEq"></tbody>
+        </table></div>
+      </section>
+
+      <!-- ===== PERSONAL ===== -->
+      <section class="sec full" aria-label="Disponibilidad de personal certificado">
+        <h2>Disponibilidad de Personal Certificado (Turno Actual)</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Operador</th><th>Rol</th><th>Certificación Material Peligroso / Volátil</th><th>Estado</th></tr></thead>
+          <tbody id="tbPer"></tbody>
+        </table></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div id="toastHost"></div>
+
+<script>
+/* ===== JS: DATOS ===== */
+const orden = { id:"OP-5014", harinaKg:1750, maceradoL:325, totalLotes:50, harinaPorLoteKg:35, maceradoPorLoteL:6.5 };
+const almacenamiento = [
+ { id:"silo-1", nombre:"Silo de Harina 1", unidad:"kg", capacidad:2940, disponible:2500, requerido:1750, porLote:35 },
+ { id:"t-02", nombre:"Tanque Macerado Vino T-02", unidad:"L", capacidad:533, disponible:80, requerido:325, porLote:6.5 }
+];
+const equipos = [
+ { nombre:"Montacargas M-01", estado:"en-uso", asignacion:"Orden MV-102", bateria:45 },
+ { nombre:"Montacargas M-02", estado:"mantenimiento", asignacion:"Mantenimiento preventivo", bateria:null },
+ { nombre:"Escáner RFID/QR Portátil 4", estado:"disponible", asignacion:"—", bateria:98 }
+];
+const personal = [
+ { nombre:"Juan Pérez", rol:"Montacarguista", cert:"vigente", certDetalle:"Vence en 6 meses", estado:"activo", estadoTxt:"Activo en Piso" },
+ { nombre:"Carlos López", rol:"Operario Almacén", cert:"expirada", certDetalle:"Venció hace 12 días", estado:"bloqueado", estadoTxt:"Bloqueado para traslados E4" },
+ { nombre:"Ana Gómez", rol:"Supervisora", cert:"vigente", certDetalle:"Vence en 11 meses", estado:"disponible", estadoTxt:"Disponible" }
+];
+const TOAST_MSG = "⚠️ Conflicto: Capacidad de vino insuficiente para la próxima programación. Se requiere reabastecimiento antes de habilitar la orden de producción.";
+const $ = id => document.getElementById(id);
+
+/* Formato numérico propio: punto de miles, coma decimal */
+function fmt(n){
+  const [e,d] = String(n).split(".");
+  const m = e.replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  return d ? m+","+d : m;
+}
+/* Reglas de color de estado */
+const nivel = p => p>40 ? "ok" : p>20 ? "warn" : "danger";
+const colBat = p => p>60 ? "var(--ok)" : p>=30 ? "var(--yellow)" : "var(--danger)";
+const pct = a => Math.round(a.disponible/a.capacidad*100);
+const lotes = a => Math.min(orden.totalLotes, Math.floor(a.disponible/a.porLote));
+
+/* ===== JS: HEADER Y SIDEBAR ===== */
+const tick = () => { $("clock").textContent = new Date().toTimeString().slice(0,8); };
+tick(); setInterval(tick,1000);
+$("toggleSide").addEventListener("click",e=>{
+  const c = $("sidebar").classList.toggle("collapsed");
+  e.currentTarget.setAttribute("aria-expanded",String(!c));
+});
+document.querySelectorAll("[data-nav]").forEach(a=>a.addEventListener("click",e=>e.preventDefault()));
+$("ordId").textContent = orden.id;
+
+/* ===== JS: INFRAESTRUCTURA ===== */
+const PILL_NIV = {ok:"Normal",warn:"Precaución",danger:"Nivel Crítico"};
+function renderAlm(diag){
+  $("almac").innerHTML = almacenamiento.map(a=>{
+    const p = pct(a), n = nivel(p), n_l = lotes(a), conf = diag && n_l < orden.totalLotes;
+    const reqPos = Math.min(100, a.requerido/a.capacidad*100);
+    const cov = diag ? (n_l>=orden.totalLotes
+      ? `<div class="g-cov ok">✓ Cubre ${n_l} de ${orden.totalLotes} lotes · Excedente ${fmt(a.disponible-a.requerido)} ${a.unidad}</div>`
+      : `<div class="g-cov bad">✕ Cubre ${n_l} de ${orden.totalLotes} lotes · Déficit ${fmt(a.requerido-a.disponible)} ${a.unidad}</div>`) : "";
+    return `<article class="gauge lvl-${n} ${conf?"conflict":""} ${diag?"has-req":""}">
+      <div class="g-top"><span class="g-name">${a.nombre}${conf?'<span class="tag">Conflicto</span>':""}</span>
+        <span class="pill pill--${n}">${PILL_NIV[n]}</span></div>
+      <div class="g-pct">${p} %</div>
+      <div class="track" role="img" aria-label="Nivel ${p} por ciento">
+        <div class="fill" style="width:${p}%"></div>
+        <span class="mark" style="left:25%"></span><span class="mark" style="left:50%"></span><span class="mark" style="left:75%"></span>
+        ${diag?`<span class="req" style="left:${reqPos}%"></span><span class="req-lbl" style="left:${reqPos}%">Requerido ${orden.id}: ${fmt(a.requerido)} ${a.unidad}</span>`:""}
+      </div>
+      <div class="scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100 %</span></div>
+      ${n==="danger"?`<div class="g-alert">⚠ Alerta: Capacidad Baja. Disponible: <span class="num">${fmt(a.disponible)} ${a.unidad}</span></div>`:""}
+      <div class="g-meta"><span>Disponible: <b class="num">${fmt(a.disponible)} ${a.unidad}</b></span><span>Capacidad: <b class="num">${fmt(a.capacidad)} ${a.unidad}</b></span></div>
+      ${cov}</article>`;
+  }).join("");
+}
+
+/* ===== JS: EQUIPOS ===== */
+const EQ = {
+  "en-uso":{cls:"info",txt:"En Uso",borde:"info",pulse:true},
+  "mantenimiento":{cls:"neutral",txt:"🔧 Mantenimiento",borde:"neutral"},
+  "disponible":{cls:"ok",txt:"Disponible",borde:"ok"}
+};
+function renderEquipos(){
+  $("tbEq").innerHTML = equipos.map(e=>{
+    const m = EQ[e.estado];
+    const bat = e.bateria===null ? "—" : `<span class="bat"><i><b style="width:${e.bateria}%;background:${colBat(e.bateria)}"></b></i>${e.bateria} %</span>`;
+    return `<tr class="b-${m.borde}"><td>${e.nombre}</td><td><span class="pill pill--${m.cls} ${m.pulse?"pulse":""}">${m.txt}</span></td><td>${e.asignacion}</td><td>${bat}</td></tr>`;
+  }).join("");
+}
+
+/* ===== JS: PERSONAL ===== */
+const EST = {activo:["info","b-info"],bloqueado:["danger","b-danger"],disponible:["ok","b-ok"]};
+function renderPersonal(diag){
+  $("tbPer").innerHTML = personal.map(p=>{
+    const [c,b] = EST[p.estado];
+    const exp = p.cert==="expirada";
+    const cert = exp ? `<span class="pill pill--danger ${diag?"flash":""}">✕ Expirada</span>` : `<span class="pill pill--ok">✓ Vigente</span>`;
+    const ico = p.estado==="bloqueado" ? "🔒 " : "";
+    return `<tr class="${b} ${diag&&exp?"conflict-row":""}"><td>${p.nombre}</td><td>${p.rol}</td>
+      <td>${cert}<span class="muted">${p.certDetalle}</span></td><td><span class="pill pill--${c}">${ico}${p.estadoTxt}</span></td></tr>`;
+  }).join("");
+}
+
+/* ===== JS: BANNER DE DIAGNÓSTICO ===== */
+/* Clasifica cada recurso: critico / advertencia / ok (calculado desde los datos) */
+function conteo(){
+  const r = {critico:0,adv:0,ok:0};
+  almacenamiento.forEach(a=>{ lotes(a)<orden.totalLotes || nivel(pct(a))==="danger" ? r.critico++ : nivel(pct(a))==="warn" ? r.adv++ : r.ok++; });
+  equipos.forEach(e=>{ e.estado==="mantenimiento" || (e.bateria!==null && e.bateria<=60 && e.bateria>=30) ? r.adv++ : (e.bateria!==null && e.bateria<30) ? r.critico++ : r.ok++; });
+  personal.forEach(p=>{ p.cert==="expirada" ? r.critico++ : r.ok++; });
+  return r;
+}
+function setBanner(diag){
+  const b = $("banner");
+  if(!diag){ b.className="banner"; $("bannerTxt").innerHTML=`<b>PENDIENTE</b> Diagnóstico pendiente — ejecute el diagnóstico para validar recursos contra ${orden.id}`; return; }
+  const c = conteo();
+  b.className="banner crit";
+  $("bannerTxt").innerHTML=`<b>DIAGNÓSTICO</b> <span class="num">${new Date().toTimeString().slice(0,8)}</span> — ${c.critico} críticos · ${c.adv} advertencias · ${c.ok} recursos OK`;
+}
+
+/* ===== JS: TOAST ===== */
+let toastTimer;
+function cerrarToast(){ clearTimeout(toastTimer); $("toastHost").innerHTML=""; }
+function mostrarToast(){
+  cerrarToast(); // evita duplicados
+  $("toastHost").innerHTML = `<div class="toast" role="alert"><p>${TOAST_MSG}</p><button aria-label="Cerrar aviso" id="toastX">✕</button></div>`;
+  $("toastX").addEventListener("click",cerrarToast);
+  toastTimer = setTimeout(cerrarToast,8000);
+}
+
+/* ===== JS: DIAGNÓSTICO ===== */
+function pintar(diag){ renderAlm(diag); renderEquipos(); renderPersonal(diag); setBanner(diag); }
+$("btnDiag").addEventListener("click",e=>{
+  const b = e.currentTarget; if(b.disabled) return;
+  cerrarToast(); pintar(false);            // reinicia estado visual
+  b.disabled = true; b.textContent = "Ejecutando diagnóstico…";
+  setTimeout(()=>{
+    pintar(true); mostrarToast();
+    b.disabled = false; b.textContent = "Repetir diagnóstico";
+  },1000);
+});
+pintar(false);
+</script>
+</body>
+</html>
